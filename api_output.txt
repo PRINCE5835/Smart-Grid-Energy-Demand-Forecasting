@@ -1,0 +1,2 @@
+[INFO] Model loaded. Features: ['hour', 'day_of_week', 'month']
+INFO:     127.0.0.1:50691 - "GET /predict?dt=2025-06-15%2014:00:00 HTTP/1.1" 200 OK
