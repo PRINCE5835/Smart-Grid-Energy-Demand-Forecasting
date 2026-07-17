@@ -1,9 +1,7 @@
 services:
   - type: web
     name: smart-grid-energy-api
-    runtime: python
+    env: python
+    pythonVersion: 3.11.6
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn backend.app:app --host 0.0.0.0 --port $PORT
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.6
