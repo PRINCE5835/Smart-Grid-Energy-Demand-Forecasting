@@ -91,6 +91,60 @@ Response:
 }
 ```
 
+## Deploy to Render (Backend) + Netlify (Frontend)
+
+### 1. Push to GitHub
+
+```bash
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+git push -u origin main
+```
+
+### 2. Deploy API on Render
+
+1. Go to [render.com](https://render.com) and sign up / log in.
+2. Click **New +** → **Web Service**.
+3. Connect your GitHub repo.
+4. Render will auto-detect the `render.yaml` — or manually fill:
+   - **Name:** `smart-grid-energy-api`
+   - **Runtime:** Python
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `uvicorn backend.app:app --host 0.0.0.0 --port $PORT`
+5. Click **Create Web Service**.
+6. Wait for the deploy to finish, then copy your URL (e.g. `https://smart-grid-energy-api.onrender.com`).
+
+### 3. Update Netlify proxy to point at your Render URL
+
+Open `netlify.toml` and replace `YOUR_RENDER_URL` with your actual Render URL:
+
+```toml
+[[redirects]]
+  from = "/api/*"
+  to = "https://smart-grid-energy-api.onrender.com/:splat"
+  status = 200
+  force = true
+```
+
+Commit and push the change:
+
+```bash
+git add netlify.toml
+git commit -m "Set Render backend URL"
+git push
+```
+
+### 4. Deploy Frontend on Netlify
+
+1. Go to [netlify.com](https://netlify.com) and log in.
+2. Click **Add new site** → **Import an existing project**.
+3. Connect your GitHub repo.
+4. **Build settings:** leave defaults (publish directory = `frontend`).
+5. Click **Deploy site**.
+6. Done! Your frontend is live. The `/api/*` requests will automatically proxy to your Render backend.
+
 ## Notes
 
 - If you have a real Kaggle dataset (e.g., PJME hourly energy consumption), place it at `dataset/energy_data.csv` with columns `Datetime` and `PJME_MW` — the script will use it automatically.

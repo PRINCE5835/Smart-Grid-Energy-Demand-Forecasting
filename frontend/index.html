@@ -184,6 +184,9 @@
         const predictedValue = document.getElementById('predictedValue');
         const featureInfo = document.getElementById('featureInfo');
 
+        const isLocal = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+        const API_BASE = isLocal ? 'http://127.0.0.1:8000' : '/api';
+
         datetimeInput.value = new Date().toISOString().slice(0, 16);
 
         predictBtn.addEventListener('click', async () => {
@@ -200,7 +203,7 @@
             predictBtn.disabled = true;
 
             try {
-                const res = await fetch(`http://127.0.0.1:8000/predict?dt=${encodeURIComponent(dt)}`);
+                const res = await fetch(`${API_BASE}/predict?dt=${encodeURIComponent(dt)}`);
                 const data = await res.json();
 
                 if (data.error) {
@@ -216,7 +219,7 @@
                 `;
                 resultBox.classList.add('visible');
             } catch (err) {
-                showError("Could not connect to the backend. Make sure the API is running on port 8000.");
+                showError("Could not connect to the backend. Make sure the API is running.");
             } finally {
                 spinner.classList.remove('visible');
                 predictBtn.disabled = false;
