@@ -1,7 +1,9 @@
-import pandas as pd
-import numpy as np
+import csv
 import pickle
 import os
+import math
+from datetime import datetime, timedelta
+import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error
@@ -12,39 +14,62 @@ FEATURES_PATH = os.path.join(os.path.dirname(__file__), 'features.pkl')
 
 print("[INFO] Loading dataset...")
 
+hours = []
+days = []
+months = []
+loads = []
+
 if not os.path.exists(DATA_PATH):
     print("[INFO] No real dataset found. Generating synthetic hourly energy data...")
     np.random.seed(42)
-    dates = pd.date_range(start='2016-01-01', end='2018-12-31 23:00:00', freq='h')
-    base = 20000
-    hourly_pattern = 5000 * np.sin(2 * np.pi * (dates.hour / 24) - np.pi / 2)
-    weekly_pattern = 3000 * np.sin(2 * np.pi * (dates.dayofweek / 7))
-    yearly_pattern = 8000 * np.sin(2 * np.pi * (dates.dayofyear / 365) - np.pi / 2)
-    noise = np.random.normal(0, 1500, len(dates))
-    values = base + hourly_pattern + weekly_pattern + yearly_pattern + noise
-    values = np.clip(values, 5000, 50000)
-    df = pd.DataFrame({'Datetime': dates, 'PJME_MW': values.astype(int)})
-    df.to_csv(DATA_PATH, index=False)
+    start = datetime(2016, 1, 1, 0, 0, 0)
+    total_hours = 26304
+    for i in range(total_hours):
+        current = start + timedelta(hours=i)
+        h = current.hour
+        d = current.weekday()
+        m = current.month
+        hour_of_year = current.timetuple().tm_yday * 24 + h
+        base = 20000
+        hourly_pattern = 5000 * math.sin(2 * math.pi * (h / 24) - math.pi / 2)
+        weekly_pattern = 3000 * math.sin(2 * math.pi * (d / 7))
+        yearly_pattern = 8000 * math.sin(2 * math.pi * (hour_of_year / 8760) - math.pi / 2)
+        noise = np.random.normal(0, 1500)
+        value = base + hourly_pattern + weekly_pattern + yearly_pattern + noise
+        value = max(5000, min(50000, value))
+        hours.append(h)
+        days.append(d)
+        months.append(m)
+        loads.append(int(value))
+
+    with open(DATA_PATH, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['Datetime', 'PJME_MW'])
+        for i in range(total_hours):
+            dt = start + timedelta(hours=i)
+            writer.writerow([dt.strftime('%Y-%m-%d %H:%M:%S'), loads[i]])
     print(f"[INFO] Synthetic dataset saved to {DATA_PATH}")
 else:
-    df = pd.read_csv(DATA_PATH, parse_dates=['Datetime'])
+    with open(DATA_PATH, 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            dt = datetime.strptime(row['Datetime'], '%Y-%m-%d %H:%M:%S')
+            hours.append(dt.hour)
+            days.append(dt.weekday())
+            months.append(dt.month)
+            loads.append(float(row['PJME_MW']))
 
-print(f"[INFO] Dataset shape: {df.shape}")
-print(df.head(3))
+print(f"[INFO] Total samples loaded: {len(loads)}")
 
-print("[INFO] Extracting time-based features...")
-df['hour'] = df['Datetime'].dt.hour
-df['day_of_week'] = df['Datetime'].dt.dayofweek
-df['month'] = df['Datetime'].dt.month
+X = np.column_stack([hours, days, months])
+y = np.array(loads)
 
 features = ['hour', 'day_of_week', 'month']
-X = df[features]
-y = df['PJME_MW']
 
 print("[INFO] Splitting into train (80%) and test (20%)...")
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42, shuffle=False
-)
+split = int(len(X) * 0.8)
+X_train, X_test = X[:split], X[split:]
+y_train, y_test = y[:split], y[split:]
 
 print("[INFO] Training Linear Regression model...")
 model = LinearRegression()

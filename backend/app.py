@@ -1,6 +1,6 @@
 import pickle
 import os
-import pandas as pd
+import numpy as np
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -45,8 +45,8 @@ def predict(dt: str = Query(..., description="Datetime in format YYYY-MM-DD HH:M
     day_of_week = dt_parsed.weekday()
     month = dt_parsed.month
 
-    input_df = pd.DataFrame([[hour, day_of_week, month]], columns=feature_columns)
-    prediction = model.predict(input_df)[0]
+    features_array = np.array([[hour, day_of_week, month]])
+    prediction = model.predict(features_array)[0]
 
     return PredictResponse(
         datetime=dt,
